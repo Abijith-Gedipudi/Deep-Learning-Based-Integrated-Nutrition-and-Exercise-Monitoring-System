@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Log Food (image)</h3>
+
+{% if not predictions %}
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label>Select image</label>
+    <input type="file" name="image" accept="image/*" class="form-control">
+  </div>
+  <button class="btn btn-primary">Upload & Analyze</button>
+</form>
+{% else %}
+<div class="row">
+  <div class="col-md-6">
+    <img src="{{ image_url }}" class="img-fluid mb-2">
+    <form method="post" action="{{ url_for('accept_prediction') }}">
+      <input type="hidden" name="image" value="{{ saved_filename }}">
+      <div class="mb-3">
+        <label>Top predictions</label>
+        <select name="food_name" class="form-select">
+          {% for name, prob in predictions %}
+            <option value="{{ name }}">{{ name }} — {{ (prob*100)|round(1) }}%</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input type="hidden" name="source" value="ai">
+      <button class="btn btn-success">Accept & Log</button>
+    </form>
+
+    <hr>
+    <h5>Manual entry</h5>
+    <form method="post" action="{{ url_for('manual_entry') }}">
+      <div class="mb-2"><input name="food_name" placeholder="Food name" class="form-control"></div>
+      <div class="mb-2"><input name="calories" placeholder="Calories" class="form-control" type="number" step="0.1"></div>
+      <button class="btn btn-secondary">Save manually</button>
+    </form>
+  </div>
+
+  <div class="col-md-6">
+    <h5>Other options</h5>
+    <p>Search nutrient data (local DB or external API) — try "pizza" or "hamburger".</p>
+    <div class="input-group mb-3">
+      <input id="search_q" class="form-control" placeholder="Search food...">
+      <button id="search_btn" class="btn btn-outline-primary">Search</button>
+    </div>
+    <div id="search_result"></div>
+
+    <hr>
+    <h5>Exercise suggestion</h5>
+    <p>After you accept a food log you'll be able to request exercise suggestions for the calories logged.</p>
+  </div>
+</div>
+
+<script>
+document.getElementById('search_btn').addEventListener('click', async () => {
+  const q = document.getElementById('search_q').value;
+  if (!q) return;
+  const res = await fetch(`/search_food?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  document.getElementById('search_result').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+});
+</script>
+{% endif %}
+{% endblock %}

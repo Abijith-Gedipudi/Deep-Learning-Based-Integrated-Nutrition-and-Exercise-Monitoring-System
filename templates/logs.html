@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Food History{% endblock %}
+{% block page_title %}Food History{% endblock %}
+{% block page_subtitle %}View and manage all your food logs{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h4><i class="fas fa-history"></i> All Food Logs</h4>
+                <p class="text-muted mb-0">Total entries: <strong>{{ logs|length }}</strong></p>
+            </div>
+            <a href="{{ url_for('log_food') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Log New Food
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if logs %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead style="background: #F9FAFB;">
+                            <tr>
+                                <th style="width: 200px;">Date & Time</th>
+                                <th>Food Name</th>
+                                <th style="width: 120px;">Calories</th>
+                                <th style="width: 100px;">Protein</th>
+                                <th style="width: 100px;">Carbs</th>
+                                <th style="width: 100px;">Fats</th>
+                                <th style="width: 100px;">Source</th>
+                                <th style="width: 80px;">Image</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ log.date.strftime('%b %d, %Y') }}</strong><br>
+                                        <small class="text-muted">{{ log.date.strftime('%I:%M %p') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong style="color: #111827;">{{ log.food_name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger" style="font-size: 14px;">
+                                        <i class="fas fa-fire"></i> {{ log.calories|round|int }} kcal
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-primary"><strong>{{ log.protein|round(1) }}g</strong></span>
+                                </td>
+                                <td>
+                                    <span class="text-warning"><strong>{{ log.carbs|round(1) }}g</strong></span>
+                                </td>
+                                <td>
+                                    <span style="color: #8B5CF6;"><strong>{{ log.fats|round(1) }}g</strong></span>
+                                </td>
+                                <td>
+                                    {% if log.source == 'ai' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-robot"></i> AI
+                                    </span>
+                                    {% elif log.source == 'search' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-search"></i> Search
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-keyboard"></i> Manual
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if log.image_path %}
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#imageModal{{ log.id }}">
+                                        <i class="fas fa-image"></i>
+                                    </button>
+                                    
+                                    <!-- Image Modal -->
+                                    <div class="modal fade" id="imageModal{{ log.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">{{ log.food_name }}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body text-center">
+                                                    <img src="{{ url_for('static', filename='uploads/' + log.image_path) }}" 
+                                                         class="img-fluid rounded" alt="{{ log.food_name }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-chart-pie"></i> Total Summary</h5>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h3 class="mb-1">{{ logs|sum(attribute='calories')|round|int }}</h3>
+                        <p class="mb-0 opacity-75">Total Calories</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h3 class="mb-1">{{ logs|sum(attribute='protein')|round|int }}g</h3>
+                        <p class="mb-0 opacity-75">Total Protein</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h3 class="mb-1">{{ logs|sum(attribute='carbs')|round|int }}g</h3>
+                        <p class="mb-0 opacity-75">Total Carbs</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h3 class="mb-1">{{ logs|sum(attribute='fats')|round|int }}g</h3>
+                        <p class="mb-0 opacity-75">Total Fats</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                <h4>No Food Logs Yet</h4>
+                <p class="text-muted mb-4">Start tracking your meals to see your nutrition history</p>
+                <a href="{{ url_for('log_food') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> Log Your First Meal
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

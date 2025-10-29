@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Food History - Baymax{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-history me-2"></i>Food History</h1>
+    <p>View and manage all your logged meals.</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>All Food Logs</span>
+                <div>
+                    <span class="badge bg-primary">{{ logs|length }} Total Entries</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Food Name</th>
+                                <th>Serving</th>
+                                <th>Calories</th>
+                                <th>Protein</th>
+                                <th>Carbs</th>
+                                <th>Fats</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ log.date.strftime('%b %d, %Y') }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ log.date.strftime('%I:%M %p') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong>{{ log.food_name|title }}</strong>
+                                    {% if log.image_path %}
+                                    <br><span class="badge badge-sm bg-info"><i class="fas fa-image"></i> Photo</span>
+                                    {% endif %}
+                                </td>
+                                <td><small class="text-muted">{{ log.serving_size }}</small></td>
+                                <td>
+                                    <span class="badge" style="background: #4F46E5; font-size: 0.9rem;">
+                                        {{ log.calories }} kcal
+                                    </span>
+                                </td>
+                                <td><span class="text-success fw-bold">{{ log.protein }}g</span></td>
+                                <td><span class="text-warning fw-bold">{{ log.carbs }}g</span></td>
+                                <td><span class="text-danger fw-bold">{{ log.fats }}g</span></td>
+                                <td>
+                                    {% if log.source == 'ai' %}
+                                    <span class="badge bg-success"><i class="fas fa-brain"></i> AI</span>
+                                    {% elif log.source == 'search' %}
+                                    <span class="badge bg-info"><i class="fas fa-search"></i> Search</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary"><i class="fas fa-keyboard"></i> Manual</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <form method="post" action="{{ url_for('delete_log', log_id=log.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this entry?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Summary Stats -->
+                <div class="mt-4 p-4" style="background: #F9FAFB; border-radius: 12px;">
+                    <h5 class="mb-3"><i class="fas fa-chart-pie me-2"></i>All-Time Summary</h5>
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-fire fa-2x" style="color: #4F46E5;"></i>
+                            </div>
+                            <h4 class="fw-bold">{{ logs|sum(attribute='calories')|int }}</h4>
+                            <small class="text-muted">Total Calories</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-dumbbell fa-2x" style="color: #10B981;"></i>
+                            </div>
+                            <h4 class="fw-bold">{{ logs|sum(attribute='protein')|round(1) }}</h4>
+                            <small class="text-muted">Total Protein (g)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-bread-slice fa-2x" style="color: #F59E0B;"></i>
+                            </div>
+                            <h4 class="fw-bold">{{ logs|sum(attribute='carbs')|round(1) }}</h4>
+                            <small class="text-muted">Total Carbs (g)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-2">
+                                <i class="fas fa-cheese fa-2x" style="color: #EF4444;"></i>
+                            </div>
+                            <h4 class="fw-bold">{{ logs|sum(attribute='fats')|round(1) }}</h4>
+                            <small class="text-muted">Total Fats (g)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-utensils fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Food Logs Yet</h4>
+                    <p class="text-muted mb-4">Start tracking your meals to see them here!</p>
+                    <a href="{{ url_for('log_food') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-camera me-2"></i>Log Your First Meal
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

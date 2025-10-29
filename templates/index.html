@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Baymax - Your Personal Health Assistant{% endblock %}
+
+{% block content %}
+<div class="row align-items-center min-vh-75">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-4" style="color: #1F2937;">
+            Your Personal <span style="color: #4F46E5;">Health</span> Assistant
+        </h1>
+        <p class="lead mb-4" style="color: #6B7280;">
+            Track your nutrition effortlessly with AI-powered food recognition. Upload a photo, get instant nutritional information, and receive personalized exercise recommendations.
+        </p>
+        
+        <div class="d-flex gap-3 mb-5">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('log_food') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-camera me-2"></i>Log Food Now
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-chart-line me-2"></i>View Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Get Started Free
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Features -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #4F46E5, #6366F1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-brain text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-1">AI-Powered Recognition</h5>
+                        <p class="text-muted mb-0">Identify food from photos instantly</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-apple-alt text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-1">200+ Food Items</h5>
+                        <p class="text-muted mb-0">Comprehensive nutrition database</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-running text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-1">Exercise Suggestions</h5>
+                        <p class="text-muted mb-0">Personalized workout recommendations</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #EF4444, #DC2626); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-chart-pie text-white"></i>
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <h5 class="mb-1">Track Your Progress</h5>
+                        <p class="text-muted mb-0">Visualize your nutrition journey</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="text-center">
+            <div style="background: linear-gradient(135deg, #EEF2FF, #E0E7FF); border-radius: 20px; padding: 3rem; box-shadow: 0 10px 40px rgba(79, 70, 229, 0.1);">
+                <i class="fas fa-heartbeat" style="font-size: 8rem; color: #4F46E5; margin-bottom: 1rem;"></i>
+                <h3 style="color: #1F2937; font-weight: 600;">Start Your Health Journey Today</h3>
+                <p style="color: #6B7280;">Join thousands of users tracking their nutrition intelligently</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not current_user.is_authenticated %}
+<div class="row mt-5 pt-5">
+    <div class="col-12 text-center">
+        <h2 class="mb-5" style="color: #1F2937; font-weight: 700;">How It Works</h2>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center p-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #4F46E5, #6366F1); border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 1.5rem; font-weight: 700;">1</span>
+                    </div>
+                </div>
+                <h4 class="mb-3">Upload Photo</h4>
+                <p class="text-muted">Take a picture of your meal or select from gallery</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center p-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 1.5rem; font-weight: 700;">2</span>
+                    </div>
+                </div>
+                <h4 class="mb-3">Get Analysis</h4>
+                <p class="text-muted">AI identifies food and provides detailed nutrition info</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 text-center p-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 1.5rem; font-weight: 700;">3</span>
+                    </div>
+                </div>
+                <h4 class="mb-3">Track & Improve</h4>
+                <p class="text-muted">Monitor your intake and get exercise recommendations</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

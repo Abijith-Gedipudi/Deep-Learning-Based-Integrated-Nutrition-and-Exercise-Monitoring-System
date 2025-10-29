@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>All logs</h3>
+<table class="table">
+  <thead><tr><th>Date</th><th>Food</th><th>Calories</th><th>Source</th></tr></thead>
+  <tbody>
+    {% for l in logs %}
+      <tr>
+        <td>{{ l.date.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ l.food_name }}</td>
+        <td>{{ l.calories }}</td>
+        <td>{{ l.source }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Exercise Tracker - Baymax{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-dumbbell me-2"></i>Exercise Tracker</h1>
+    <p>Track your workouts and reach your daily calorie burn goal.</p>
+</div>
+
+<!-- Daily Progress Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-3"><i class="fas fa-fire me-2"></i>Today's Exercise Goal</h4>
+                        <h2 class="mb-2 display-5 fw-bold">{{ stats.total_calories }} / {{ goal.daily_calorie_goal }} kcal</h2>
+                        <div class="progress" style="height: 25px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar progress-bar-exercise {% if progress_percentage >= 100 %}goal-reached{% endif %}" 
+                                style="width: {{ progress_percentage }}%;" 
+                                role="progressbar" 
+                                aria-valuenow="{{ progress_percentage }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                                {{ progress_percentage }}%
+                            </div>
+                        </div>
+                        <p class="mt-2 mb-0 opacity-75">
+                            {% if remaining_calories > 0 %}
+                                <i class="fas fa-bullseye me-1"></i>{{ remaining_calories }} kcal remaining to reach your goal
+                            {% else %}
+                                <i class="fas fa-trophy me-1"></i>Congratulations! You've reached your goal! 🎉
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div style="font-size: 5rem; opacity: 0.9;">
+                            {% if progress_percentage < 30 %}
+                                💪
+                            {% elif progress_percentage < 70 %}
+                                🔥
+                            {% elif progress_percentage < 100 %}
+                                ⚡
+                            {% else %}
+                                🏆
+                            {% endif %}
+                        </div>
+                        <p class="mb-1"><strong>{{ stats.exercise_count }}</strong> workouts today</p>
+                        <small class="opacity-75">{{ stats.total_duration }} minutes</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Log Exercise Form -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle me-2"></i>Log Exercise
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('log_exercise') }}" id="exerciseForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Exercise</label>
+                        <select name="exercise_key" class="form-select" id="exerciseSelect" required>
+                            <option value="">Choose an exercise...</option>
+                            {% for category, exercises in exercises_by_category.items() %}
+                                <optgroup label="{{ category }}">
+                                    {% for ex in exercises %}
+                                        <option value="{{ ex.key }}" data-met="{{ ex.met }}" data-icon="{{ ex.icon }}">
+                                            {{ ex.icon }} {{ ex.name }} ({{ ex.met }} MET)
+                                        </option>
+                                    {% endfor %}
+                                </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Duration (minutes)</label>
+                        <div class="input-group">
+                            <input type="number" name="duration" class="form-control" id="durationInput" 
+                                   min="1" step="1" placeholder="30" required>
+                            <span class="input-group-text">min</span>
+                        </div>
+                        
+                        <!-- Quick Duration Buttons -->
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDuration(15)">15 min</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDuration(30)">30 min</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDuration(45)">45 min</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDuration(60)">60 min</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Estimated Calories Burned</label>
+                        <div class="alert alert-info" id="calorieEstimate">
+                            <i class="fas fa-calculator me-2"></i>
+                            <strong id="estimatedCalories">0</strong> kcal
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea name="notes" class="form-control" rows="2" 
+                                  placeholder="How did you feel? Any achievements?"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">
+                        <i class="fas fa-check me-2"></i>Log Exercise
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Update Goal Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-bullseye me-2"></i>Daily Goal
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('update_exercise_goal') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Daily Calorie Burn Goal</label>
+                        <div class="input-group">
+                            <input type="number" name="daily_goal" class="form-control" 
+                                   value="{{ goal.daily_calorie_goal }}" min="100" step="50" required>
+                            <span class="input-group-text">kcal</span>
+                        </div>
+                        <small class="text-muted">Recommended: 300-600 kcal/day</small>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-save me-2"></i>Update Goal
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Today's Exercises & Quick Stats -->
+    <div class="col-lg-7">
+        <!-- Today's Exercises -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Today's Workouts</span>
+                <a href="{{ url_for('exercise_history') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-history me-1"></i>View History
+                </a>
+            </div>
+            <div class="card-body">
+                {% if stats.exercises %}
+                    <div class="list-group list-group-flush">
+                        {% for ex in stats.exercises %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ ex.exercise_name }}</h6>
+                                    <small class="text-muted">
+                                        <i class="far fa-clock me-1"></i>{{ ex.duration_minutes }} min
+                                        <span class="mx-2">|</span>
+                                        <i class="fas fa-fire me-1"></i>{{ ex.calories_burned }} kcal
+                                        <span class="mx-2">|</span>
+                                        {{ ex.date.strftime('%I:%M %p') }}
+                                    </small>
+                                    {% if ex.notes %}
+                                    <p class="mb-0 mt-1 small text-muted">
+                                        <i class="fas fa-sticky-note me-1"></i>{{ ex.notes }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <form method="post" action="{{ url_for('delete_exercise', log_id=ex.id) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('Delete this exercise log?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-dumbbell fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No workouts logged today</h5>
+                        <p class="text-muted">Start by logging your first exercise!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-fire fa-2x mb-2" style="color: #EF4444;"></i>
+                        <h4 class="mb-1 fw-bold">{{ stats.total_calories }}</h4>
+                        <small class="text-muted">Calories Burned</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-clock fa-2x mb-2" style="color: #F59E0B;"></i>
+                        <h4 class="mb-1 fw-bold">{{ stats.total_duration }}</h4>
+                        <small class="text-muted">Minutes Active</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-2x mb-2" style="color: #10B981;"></i>
+                        <h4 class="mb-1 fw-bold">{{ stats.exercise_count }}</h4>
+                        <small class="text-muted">Workouts Today</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setDuration(minutes) {
+    document.getElementById('durationInput').value = minutes;
+    calculateCalories();
+}
+
+function calculateCalories() {
+    const select = document.getElementById('exerciseSelect');
+    const durationInput = document.getElementById('durationInput');
+    const estimatedCalories = document.getElementById('estimatedCalories');
+    
+    const selectedOption = select.options[select.selectedIndex];
+    const met = parseFloat(selectedOption.getAttribute('data-met')) || 0;
+    const duration = parseFloat(durationInput.value) || 0;
+    const weight = parseFloat('{{ current_user.weight_kg }}') || 70;
+    
+    if (met > 0 && duration > 0) {
+        const calories = Math.round(met * weight * (duration / 60));
+        estimatedCalories.textContent = calories;
+    } else {
+        estimatedCalories.textContent = '0';
+    }
+}
+
+// Add event listeners
+document.getElementById('exerciseSelect').addEventListener('change', calculateCalories);
+document.getElementById('durationInput').addEventListener('input', calculateCalories);
+</script>
+{% endblock %}

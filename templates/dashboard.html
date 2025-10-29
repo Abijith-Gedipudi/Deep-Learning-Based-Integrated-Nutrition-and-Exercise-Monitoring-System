@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Baymax{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-chart-line me-2"></i>Dashboard</h1>
+    <p>Welcome back, {{ current_user.name or current_user.email }}! Here's your nutrition overview.</p>
+</div>
+
+<!-- NEW: Daily Calorie Tracker Card -->
+{% if recommended_calories %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-3"><i class="fas fa-fire me-2"></i>Today's Calorie Intake</h4>
+                        <h2 class="mb-2 display-5 fw-bold">{{ consumed_today }} / {{ recommended_calories }} kcal</h2>
+                        <div class="progress" style="height: 25px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ [calorie_percentage, 100]|min }}%;" 
+                                 aria-valuenow="{{ calorie_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ calorie_percentage }}%
+                            </div>
+                        </div>
+                        <p class="mt-2 mb-0 opacity-75">
+                            {% if remaining_calories > 0 %}
+                                <i class="fas fa-check-circle me-1"></i>{{ remaining_calories }} kcal remaining for today
+                            {% elif remaining_calories == 0 %}
+                                <i class="fas fa-star me-1"></i>Perfect! You've met your daily goal!
+                            {% else %}
+                                <i class="fas fa-exclamation-triangle me-1"></i>You've exceeded by {{ remaining_calories|abs }} kcal
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div style="font-size: 5rem; opacity: 0.9;">
+                            {% if calorie_percentage < 50 %}
+                                🍽️
+                            {% elif calorie_percentage < 100 %}
+                                😊
+                            {% else %}
+                                🎯
+                            {% endif %}
+                        </div>
+                        <small class="opacity-75">Meals today: {{ today_logs|length }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <!-- Net Calories Card -->
+        <div class="card h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="fas fa-balance-scale me-2"></i>Net Calories Today</h5>
+                <div class="text-center">
+                    <h2 class="display-4 fw-bold mb-2">{{ net_calories }}</h2>
+                    <p class="mb-2">
+                        <span class="badge bg-light text-dark me-2">
+                            <i class="fas fa-utensils me-1"></i>Consumed: {{ consumed_today }} kcal
+                        </span>
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-fire me-1"></i>Burned: {{ exercise_stats.total_calories }} kcal
+                        </span>
+                    </p>
+                    <small class="opacity-75">
+                        {% if net_calories > 0 %}
+                            Net positive - energy available for body functions
+                        {% elif net_calories == 0 %}
+                            Perfect balance achieved!
+                        {% else %}
+                            Net negative - creating calorie deficit
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <!-- Exercise Quick Stats -->
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-dumbbell me-2"></i>Today's Exercise</span>
+                <a href="{{ url_for('exercise') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>Log Exercise
+                </a>
+            </div>
+            <div class="card-body">
+                {% if exercise_stats.exercise_count > 0 %}
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="mb-1">
+                                <i class="fas fa-fire fa-2x" style="color: #EF4444;"></i>
+                            </div>
+                            <h4 class="mb-0 fw-bold">{{ exercise_stats.total_calories }}</h4>
+                            <small class="text-muted">kcal burned</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-1">
+                                <i class="fas fa-clock fa-2x" style="color: #F59E0B;"></i>
+                            </div>
+                            <h4 class="mb-0 fw-bold">{{ exercise_stats.total_duration }}</h4>
+                            <small class="text-muted">minutes</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-1">
+                                <i class="fas fa-check-circle fa-2x" style="color: #10B981;"></i>
+                            </div>
+                            <h4 class="mb-0 fw-bold">{{ exercise_stats.exercise_count }}</h4>
+                            <small class="text-muted">workouts</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress to Goal -->
+                    <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Goal Progress</small>
+                        <small class="text-muted">{{ exercise_stats.total_calories }} / {{ exercise_goal }} kcal</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        {% set progress_pct = (exercise_stats.total_calories / exercise_goal * 100)|round %}
+                        {% set capped_progress = [100, progress_pct]|min %}
+                        {% set progress_color = '#10B981' if exercise_stats.total_calories >= exercise_goal else '#F59E0B' %}
+                        <div class="progress-bar" 
+                            style="width: {{ capped_progress }}%; background-color: {{ progress_color }};" 
+                            role="progressbar"></div>
+                    </div>
+                </div>
+                    
+                    <a href="{{ url_for('exercise_history') }}" class="btn btn-sm btn-outline-secondary w-100 mt-3">
+                        <i class="fas fa-history me-1"></i>View Exercise History
+                    </a>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-dumbbell fa-3x text-muted mb-2"></i>
+                        <p class="text-muted mb-3">No workouts logged today</p>
+                        <small class="text-muted d-block mb-2">Daily Goal: {{ exercise_goal }} kcal</small>
+                        <a href="{{ url_for('exercise') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Log Your First Workout
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Complete your profile</strong> to see personalized daily calorie recommendations based on your BMR (height, weight, age, and gender required).
+            <a href="{{ url_for('profile') }}" class="alert-link ms-2">Update Profile</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Weekly Avg Calories</h6>
+                        <h2 class="mb-0 fw-bold" style="color: #4F46E5;">{{ avg_calories }}</h2>
+                        <small class="text-muted">kcal/day</small>
+                    </div>
+                    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #4F46E5, #6366F1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-fire text-white fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Weekly Avg Protein</h6>
+                        <h2 class="mb-0 fw-bold" style="color: #10B981;">{{ avg_protein }}</h2>
+                        <small class="text-muted">g/day</small>
+                    </div>
+                    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-dumbbell text-white fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Weekly Avg Carbs</h6>
+                        <h2 class="mb-0 fw-bold" style="color: #F59E0B;">{{ avg_carbs }}</h2>
+                        <small class="text-muted">g/day</small>
+                    </div>
+                    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-bread-slice text-white fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Weekly Avg Fats</h6>
+                        <h2 class="mb-0 fw-bold" style="color: #EF4444;">{{ avg_fats }}</h2>
+                        <small class="text-muted">g/day</small>
+                    </div>
+                    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #EF4444, #DC2626); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-cheese text-white fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Health Info Card -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-user-circle me-2"></i>Health Information
+            </div>
+            <div class="card-body">
+                {% if bmi %}
+                    <div class="mb-4">
+                        <h5 class="mb-2">Body Mass Index (BMI)</h5>
+                        <h2 class="mb-1 fw-bold" style="color: #4F46E5;">{{ bmi }}</h2>
+                        <span class="badge {% if bmi_category == 'Normal' %}bg-success{% elif bmi_category == 'Underweight' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ bmi_category }}
+                        </span>
+                    </div>
+                {% endif %}
+                
+                {% if recommended_calories %}
+                    <div class="mb-4 p-3" style="background: #F0F9FF; border-radius: 8px; border-left: 4px solid #3B82F6;">
+                        <h6 class="mb-2"><i class="fas fa-calculator me-2"></i>Daily Calorie Need (BMR)</h6>
+                        <h3 class="mb-0 fw-bold" style="color: #3B82F6;">{{ recommended_calories }} kcal</h3>
+                        <small class="text-muted">Based on moderate activity level</small>
+                    </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">Height</small>
+                    <strong>{{ current_user.height_cm or 'Not set' }} cm</strong>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted d-block">Weight</small>
+                    <strong>{{ current_user.weight_kg or 'Not set' }} kg</strong>
+                </div>
+                
+                {% if current_user.conditions %}
+                <div class="mb-3">
+                    <small class="text-muted d-block">Health Conditions</small>
+                    <strong>{{ current_user.conditions }}</strong>
+                </div>
+                {% endif %}
+                
+                <a href="{{ url_for('profile') }}" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="fas fa-edit me-2"></i>Update Profile
+                </a>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i>Quick Actions
+            </div>
+            <div class="card-body d-grid gap-2">
+                <a href="{{ url_for('log_food') }}" class="btn btn-primary">
+                    <i class="fas fa-camera me-2"></i>Log New Food
+                </a>
+                <a href="{{ url_for('food_history') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-history me-2"></i>View History
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Logs -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Recent Food Logs (Last 7 Days)</span>
+                <a href="{{ url_for('food_history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Food</th>
+                                <th>Calories</th>
+                                <th>Protein</th>
+                                <th>Carbs</th>
+                                <th>Fats</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>
+                                    <small>{{ log.date.strftime('%b %d, %H:%M') }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ log.food_name }}</strong>
+                                    {% if log.image_path %}
+                                    <br><small class="text-muted">{{ log.serving_size }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge" style="background: #4F46E5;">{{ log.calories }}kcal</span>
+                                </td>
+                                <td>{{ log.protein }}g</td>
+                                <td>{{ log.carbs }}g</td>
+                                <td>{{ log.fats }}g</td>
+                                <td>
+                                    {% if log.source == 'ai' %}
+                                    <span class="badge bg-success">AI</span>
+                                    {% elif log.source == 'search' %}
+                                    <span class="badge bg-info">Search</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Manual</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Weekly Summary -->
+                <div class="mt-4 p-3" style="background: #F9FAFB; border-radius: 8px;">
+                    <h6 class="mb-3">7-Day Summary</h6>
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <div class="mb-1"><i class="fas fa-fire" style="color: #4F46E5;"></i></div>
+                            <h4 class="mb-0">{{ total_calories }}</h4>
+                            <small class="text-muted">Total Calories</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-1"><i class="fas fa-utensils" style="color: #10B981;"></i></div>
+                            <h4 class="mb-0">{{ recent_logs|length }}</h4>
+                            <small class="text-muted">Meals Logged</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-1"><i class="fas fa-chart-line" style="color: #F59E0B;"></i></div>
+                            <h4 class="mb-0">{{ avg_calories }}</h4>
+                            <small class="text-muted">Daily Average</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="mb-1"><i class="fas fa-trophy" style="color: #EF4444;"></i></div>
+                            <h4 class="mb-0">7</h4>
+                            <small class="text-muted">Days Tracked</small>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No food logs yet</h5>
+                    <p class="text-muted">Start tracking your nutrition by logging your first meal!</p>
+                    <a href="{{ url_for('log_food') }}" class="btn btn-primary">
+                        <i class="fas fa-camera me-2"></i>Log Your First Meal
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
