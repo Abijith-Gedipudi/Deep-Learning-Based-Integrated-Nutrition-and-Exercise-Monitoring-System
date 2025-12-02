@@ -1,0 +1,9 @@
+venv/
+*.pyc
+__pycache__/
+.DS_Store
+# Allow model file for deployment (exclude other .pth files if needed)
+# food101_model_for_inference (1).pth
+instance/db.sqlite3
+static/uploads/*
+!static/uploads/.gitkeep
