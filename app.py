@@ -15,12 +15,9 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change_this_secret_key_in_production')
+app.config['SECRET_KEY'] = 'my-secret-key-for-development'
 # Database URI - supports both SQLite (default) and PostgreSQL (if DATABASE_URL is set)
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
-if database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -819,6 +816,4 @@ def exercise_suggestions():
 
 
 if __name__ == '__main__':
-    # Use the port provided by the hosting platform (default to 5000 locally)
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)
