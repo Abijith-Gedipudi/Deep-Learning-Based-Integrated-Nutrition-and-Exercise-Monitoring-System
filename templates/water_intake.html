@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block title %}Water Intake - Baymax{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-tint me-2"></i>Water Intake Tracker</h1>
+    <p>Stay hydrated! Track your daily water consumption and maintain healthy hydration habits.</p>
+</div>
+
+<!-- Daily Progress Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); color: white; border: none;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-3"><i class="fas fa-tint me-2"></i>Today's Hydration Goal</h4>
+                        <h2 class="mb-2 display-5 fw-bold">{{ today_total }}ml / {{ goal.daily_goal_ml }}ml</h2>
+                        <div class="progress" style="height: 25px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-info" role="progressbar" 
+                                 style="width: {{ progress_percentage }}%;" 
+                                 aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ progress_percentage }}%
+                            </div>
+                        </div>
+                        <p class="mt-2 mb-0 opacity-75">
+                            {% if remaining_ml > 0 %}
+                                <i class="fas fa-tint me-1"></i>{{ remaining_ml }}ml remaining to reach your goal
+                            {% else %}
+                                <i class="fas fa-check-circle me-1"></i>Great job! You've reached your daily goal! 🎉
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div style="font-size: 5rem; opacity: 0.9;">
+                            {% if progress_percentage < 30 %}
+                                💧
+                            {% elif progress_percentage < 60 %}
+                                🥤
+                            {% elif progress_percentage < 100 %}
+                                💦
+                            {% else %}
+                                🏆
+                            {% endif %}
+                        </div>
+                        <p class="mb-1"><strong>{{ today_intakes|length }}</strong> drinks logged</p>
+                        <small class="opacity-75">{{ (today_total / 1000)|round(1) }} liters</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Log Water Form -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle me-2"></i>Log Water Intake
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('log_water') }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Amount (ml)</label>
+                        <div class="input-group">
+                            <input type="number" name="amount_ml" class="form-control" id="amountInput" 
+                                   min="1" step="1" placeholder="250" required>
+                            <span class="input-group-text">ml</span>
+                        </div>
+                        
+                        <!-- Quick Amount Buttons -->
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="setAmount(250)">
+                                <i class="fas fa-glass-water"></i> Glass (250ml)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="setAmount(500)">
+                                <i class="fas fa-bottle-water"></i> Bottle (500ml)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="setAmount(1000)">
+                                <i class="fas fa-jug"></i> Liter (1000ml)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Beverage Type</label>
+                        <select name="beverage_type" class="form-select">
+                            <option value="water">💧 Water</option>
+                            <option value="tea">🍵 Tea</option>
+                            <option value="coffee">☕ Coffee</option>
+                            <option value="juice">🧃 Juice</option>
+                            <option value="milk">🥛 Milk</option>
+                            <option value="smoothie">🥤 Smoothie</option>
+                            <option value="other">🥤 Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Temperature</label>
+                        <select name="temperature" class="form-select">
+                            <option value="cold">❄️ Cold</option>
+                            <option value="room" selected>🌡️ Room Temperature</option>
+                            <option value="hot">🔥 Hot</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea name="notes" class="form-control" rows="2" 
+                                  placeholder="Any notes about this drink?"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">
+                        <i class="fas fa-check me-2"></i>Log Water Intake
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Weekly Average -->
+        <div class="card mt-4">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2" style="color: #06b6d4;"></i>
+                <h4 class="mb-1 fw-bold">{{ weekly_average }}ml</h4>
+                <small class="text-muted">7-Day Average</small>
+            </div>
+        </div>
+        
+        <!-- Update Goal Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-bullseye me-2"></i>Hydration Settings
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('update_water_goal') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Daily Goal (ml)</label>
+                        <div class="input-group">
+                            <input type="number" name="daily_goal_ml" class="form-control" 
+                                   value="{{ goal.daily_goal_ml }}" min="500" step="100" required>
+                            <span class="input-group-text">ml</span>
+                        </div>
+                        <small class="text-muted">Recommended: 2000-3000ml/day (8-12 glasses)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="reminder_enabled" 
+                                   id="reminderCheck" {% if goal.reminder_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="reminderCheck">
+                                <i class="fas fa-bell me-1"></i>Enable Hydration Reminders
+                            </label>
+                        </div>
+                        {% if goal.reminder_enabled %}
+                        <small class="text-success d-block mt-1">
+                            <i class="fas fa-check-circle me-1"></i>Reminders active! You'll get notified every {{ goal.reminder_interval_minutes }} minutes.
+                        </small>
+                        {% else %}
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-info-circle me-1"></i>Enable to receive browser notifications
+                        </small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Reminder Interval</label>
+                            <select name="reminder_interval_minutes" class="form-select">
+                                <option value="60" {% if goal.reminder_interval_minutes == 60 %}selected{% endif %}>Every 1 hour</option>
+                                <option value="120" {% if goal.reminder_interval_minutes == 120 %}selected{% endif %}>Every 2 hours</option>
+                                <option value="180" {% if goal.reminder_interval_minutes == 180 %}selected{% endif %}>Every 3 hours</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Wake Time</label>
+                            <input type="time" name="wake_time" class="form-control" 
+                                   value="{{ goal.wake_time }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Sleep Time</label>
+                        <input type="time" name="sleep_time" class="form-control" 
+                               value="{{ goal.sleep_time }}" required>
+                        <small class="text-muted">Reminders only between wake and sleep time</small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-save me-2"></i>Update Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Today's Drinks & Stats -->
+    <div class="col-lg-7">
+        <!-- Beverage Breakdown -->
+        {% if beverage_breakdown %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i>Today's Beverage Breakdown
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for beverage, amount in beverage_breakdown.items() %}
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex justify-content-between align-items-center p-2" 
+                             style="background: #F0F9FF; border-radius: 8px;">
+                            <span>
+                                {% if beverage == 'water' %}💧{% elif beverage == 'tea' %}🍵
+                                {% elif beverage == 'coffee' %}☕{% elif beverage == 'juice' %}🧃
+                                {% elif beverage == 'milk' %}🥛{% elif beverage == 'smoothie' %}🥤
+                                {% else %}🥤{% endif %}
+                                {{ beverage|title }}
+                            </span>
+                            <strong style="color: #0284c7;">{{ amount }}ml</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Today's Logs -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i>Today's Water Logs</span>
+                <a href="{{ url_for('water_history') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-history me-1"></i>View History
+                </a>
+            </div>
+            <div class="card-body">
+                {% if today_intakes %}
+                    <div class="list-group list-group-flush">
+                        {% for intake in today_intakes %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        {% if intake.beverage_type == 'water' %}💧
+                                        {% elif intake.beverage_type == 'tea' %}🍵
+                                        {% elif intake.beverage_type == 'coffee' %}☕
+                                        {% elif intake.beverage_type == 'juice' %}🧃
+                                        {% elif intake.beverage_type == 'milk' %}🥛
+                                        {% elif intake.beverage_type == 'smoothie' %}🥤
+                                        {% else %}🥤{% endif %}
+                                        {{ intake.beverage_type|title }}
+                                        <span class="badge bg-info ms-2">{{ intake.amount_ml }}ml</span>
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="far fa-clock me-1"></i>{{ intake.timestamp.strftime('%I:%M %p') }}
+                                        {% if intake.temperature %}
+                                            <span class="mx-2">|</span>
+                                            {% if intake.temperature == 'cold' %}❄️
+                                            {% elif intake.temperature == 'hot' %}🔥
+                                            {% else %}🌡️{% endif %}
+                                            {{ intake.temperature|title }}
+                                        {% endif %}
+                                    </small>
+                                    {% if intake.notes %}
+                                    <p class="mb-0 mt-1 small text-muted">
+                                        <i class="fas fa-sticky-note me-1"></i>{{ intake.notes }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <form method="post" action="{{ url_for('delete_water', intake_id=intake.id) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('Delete this water log?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-tint fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No water logged today</h5>
+                        <p class="text-muted">Start hydrating by logging your first drink!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Hydration Tips -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-lightbulb me-2"></i>Hydration Tips
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2">💧 Drink water first thing in the morning</li>
+                    <li class="mb-2">🥤 Keep a water bottle with you throughout the day</li>
+                    <li class="mb-2">🍽️ Drink water before each meal</li>
+                    <li class="mb-2">🏃 Increase intake during exercise or hot weather</li>
+                    <li class="mb-2">🍉 Eat water-rich foods like fruits and vegetables</li>
+                    <li>⏰ Set reminders to drink water regularly</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data element for JavaScript config -->
+<div id="reminderConfig" 
+     data-enabled="{{ goal.reminder_enabled }}" 
+     data-interval="{{ goal.reminder_interval_minutes }}" 
+     style="display: none;">
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function setAmount(ml) {
+    document.getElementById('amountInput').value = ml;
+}
+
+// Water Reminder System
+var reminderCheckInterval = null;
+var notificationPermission = 'default';
+
+function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        return Promise.resolve(false);
+    }
+    
+    return Notification.requestPermission().then(function(permission) {
+        notificationPermission = permission;
+        console.log('Notification permission:', permission);
+        return permission === 'granted';
+    });
+}
+
+function showWaterReminder(data) {
+    if (notificationPermission === 'granted') {
+        var notification = new Notification('💧 Hydration Reminder', {
+            body: data.message,
+            requireInteraction: false,
+            silent: false
+        });
+        
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+        };
+        
+        setTimeout(function() {
+            notification.close();
+        }, 10000);
+    } else {
+        alert(data.message);
+    }
+}
+
+function checkWaterReminder() {
+    fetch('/api/water_reminder_status')
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.should_remind) {
+                showWaterReminder(data);
+            }
+        })
+        .catch(function(error) {
+            console.error('Error checking water reminder:', error);
+        });
+}
+
+function initWaterReminders() {
+    requestNotificationPermission().then(function(hasPermission) {
+        if (hasPermission) {
+            console.log('✓ Water reminders enabled');
+            checkWaterReminder();
+            reminderCheckInterval = setInterval(checkWaterReminder, 5 * 60 * 1000);
+        } else {
+            console.log('⚠ Notification permission denied - reminders disabled');
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Read config from HTML data attributes
+    var configElement = document.getElementById('reminderConfig');
+    if (configElement) {
+        var reminderEnabled = configElement.getAttribute('data-enabled') === 'True';
+        
+        if (reminderEnabled) {
+            setTimeout(initWaterReminders, 2000);
+        }
+    }
+});
+
+window.addEventListener('beforeunload', function() {
+    if (reminderCheckInterval) {
+        clearInterval(reminderCheckInterval);
+    }
+});
+</script>
+{% endblock %}

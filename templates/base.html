@@ -251,55 +251,62 @@
             Baymax
         </div>
         <ul class="sidebar-nav">
-            <li>
-                <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
-                    <i class="fas fa-home"></i>
-                    Home
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
-                    <i class="fas fa-chart-line"></i>
-                    Dashboard
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('log_food') }}" class="{% if request.endpoint == 'log_food' %}active{% endif %}">
-                    <i class="fas fa-camera"></i>
-                    Log Food
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('food_history') }}" class="{% if request.endpoint == 'food_history' %}active{% endif %}">
-                    <i class="fas fa-history"></i>
-                    Food History
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('exercise') }}" class="{% if request.endpoint == 'exercise' %}active{% endif %}">
-                    <i class="fas fa-dumbbell"></i>
-                    Exercise Tracker
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('exercise_history') }}" class="{% if request.endpoint == 'exercise_history' %}active{% endif %}">
-                    <i class="fas fa-running"></i>
-                    Exercise History
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('profile') }}" class="{% if request.endpoint == 'profile' %}active{% endif %}">
-                    <i class="fas fa-user"></i>
-                    Profile
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Logout
-                </a>
-            </li>
-        </ul>
+    <li>
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            Home
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-line"></i>
+            Dashboard
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('log_food') }}" class="{% if request.endpoint == 'log_food' %}active{% endif %}">
+            <i class="fas fa-camera"></i>
+            Log Food
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('food_history') }}" class="{% if request.endpoint == 'food_history' %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            Food History
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('exercise') }}" class="{% if request.endpoint == 'exercise' %}active{% endif %}">
+            <i class="fas fa-dumbbell"></i>
+            Exercise Tracker
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('exercise_history') }}" class="{% if request.endpoint == 'exercise_history' %}active{% endif %}">
+            <i class="fas fa-running"></i>
+            Exercise History
+        </a>
+    </li>
+    <!-- NEW: Water Intake Navigation -->
+    <li>
+        <a href="{{ url_for('water_intake') }}" class="{% if request.endpoint in ['water_intake', 'water_history'] %}active{% endif %}">
+            <i class="fas fa-tint"></i>
+            Water Intake
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('profile') }}" class="{% if request.endpoint == 'profile' %}active{% endif %}">
+            <i class="fas fa-user"></i>
+            Profile
+        </a>
+    </li>
+    <li>
+        <a href="{{ url_for('logout') }}">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+        </a>
+    </li>
+</ul>
     </div>
 
     <!-- Main Content -->

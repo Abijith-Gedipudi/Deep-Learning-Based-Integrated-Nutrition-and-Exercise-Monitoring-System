@@ -33,6 +33,8 @@ def preprocess_image(image_pil):
     ])
     return transform(image_pil).unsqueeze(0)
 
+
+
 def load_model(checkpoint_path='food101_model_for_inference (1).pth', device=None):
     """Load trained model from checkpoint"""
     if device is None:

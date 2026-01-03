@@ -67,36 +67,36 @@
                 <i class="fas fa-keyboard me-2"></i>Manual Entry
             </div>
             <div class="card-body">
-                <form method="post" action="{{ url_for('manual_entry') }}">
+                <form method="post" action="{{ url_for('manual_entry') }}" id="manualForm">
                     <div class="mb-3">
                         <label class="form-label">Food Name</label>
-                        <input type="text" name="food_name" class="form-control" required placeholder="e.g., Grilled Chicken">
+                        <input type="text" name="food_name" id="manual_food_name" class="form-control" required placeholder="e.g., Grilled Chicken">
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Serving Size</label>
-                        <input type="text" name="serving_size" class="form-control" value="100g" placeholder="e.g., 100g, 1 cup">
+                        <input type="text" name="serving_size" id="manual_serving_size" class="form-control" value="100g" placeholder="e.g., 100g, 1 cup">
                     </div>
                     
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label">Calories (kcal)</label>
-                            <input type="number" step="0.1" name="calories" class="form-control" required placeholder="0">
+                            <input type="number" step="0.1" name="calories" id="manual_calories" class="form-control" required placeholder="0">
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label">Protein (g)</label>
-                            <input type="number" step="0.1" name="protein" class="form-control" placeholder="0">
+                            <input type="number" step="0.1" name="protein" id="manual_protein" class="form-control" placeholder="0">
                         </div>
                     </div>
                     
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label">Carbs (g)</label>
-                            <input type="number" step="0.1" name="carbs" class="form-control" placeholder="0">
+                            <input type="number" step="0.1" name="carbs" id="manual_carbs" class="form-control" placeholder="0">
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label">Fats (g)</label>
-                            <input type="number" step="0.1" name="fats" class="form-control" placeholder="0">
+                            <input type="number" step="0.1" name="fats" id="manual_fats" class="form-control" placeholder="0">
                         </div>
                     </div>
                     
@@ -121,7 +121,7 @@
     <div class="col-md-4">
         <div class="card text-center p-3">
             <i class="fas fa-database fa-2x mb-2" style="color: #10B981;"></i>
-            <h6>200+ Foods</h6>
+            <h6>300,000+ Foods</h6>
             <small class="text-muted">Search our comprehensive nutrition database</small>
         </div>
     </div>
@@ -258,34 +258,89 @@ document.getElementById('imageInput')?.addEventListener('change', function(e) {
     }
 });
 
+// Function to fill manual form with food data
+function fillManualForm(food, closeSearchResults = true) {
+    document.getElementById('manual_food_name').value = food.name;
+    document.getElementById('manual_serving_size').value = food.serving || '100g';
+    document.getElementById('manual_calories').value = food.calories || 0;
+    document.getElementById('manual_protein').value = food.protein || 0;
+    document.getElementById('manual_carbs').value = food.carbs || 0;
+    document.getElementById('manual_fats').value = food.fats || 0;
+    
+    // Close search results
+    if (closeSearchResults) {
+        document.getElementById('searchResults').innerHTML = '';
+        document.getElementById('altSearchResults').innerHTML = '';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('altSearchInput').value = '';
+    }
+    
+    // Scroll to manual form
+    document.getElementById('manualForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Highlight the form briefly
+    const formCard = document.getElementById('manualForm').closest('.card');
+    formCard.style.boxShadow = '0 0 20px rgba(79, 70, 229, 0.5)';
+    formCard.style.transition = 'box-shadow 0.3s';
+    setTimeout(() => {
+        formCard.style.boxShadow = '';
+    }, 2000);
+    
+    // Show success message
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show mt-2';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>Food selected: <strong>${food.name}</strong> - You can edit the values below
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.getElementById('manualForm').insertBefore(alert, document.getElementById('manualForm').firstChild);
+    
+    // Remove alert after 5 seconds
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
 // Search functionality
 async function searchFood(query, resultsElementId) {
     if (!query.trim()) return;
     
     const resultsDiv = document.getElementById(resultsElementId);
-    resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div></div>';
+    resultsDiv.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div><p class="mt-2 mb-0 text-muted">Searching USDA database...</p></div>';
     
     try {
         const response = await fetch(`/search_food?q=${encodeURIComponent(query)}`);
         const data = await response.json();
         
         if (data.results && data.results.length > 0) {
-            let html = '<div class="list-group">';
+            // Check if we got USDA results
+            const usdaCount = data.results.filter(f => f.source === 'usda').length;
+            const localCount = data.results.filter(f => f.source === 'local').length;
+            
+            let html = '<div class="mb-2 d-flex justify-content-between align-items-center">';
+            html += `<small class="text-muted"><i class="fas fa-info-circle me-1"></i>Found ${data.results.length} results`;
+            if (usdaCount > 0 && localCount > 0) {
+                html += ` (${usdaCount} from USDA, ${localCount} from local)`;
+            } else if (usdaCount > 0) {
+                html += ` from USDA database`;
+            } else {
+                html += ` from local database`;
+            }
+            html += '</small>';
+            html += `<button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('${resultsElementId}').innerHTML=''"><i class="fas fa-times"></i></button>`;
+            html += '</div>';
+            
+            html += '<div class="list-group" style="max-height: 400px; overflow-y: auto;">';
             data.results.forEach(food => {
+                const foodJson = JSON.stringify(food).replace(/"/g, '&quot;');
                 html += `
-                    <div class="list-group-item">
+                    <div class="list-group-item list-group-item-action" style="cursor: pointer;" onclick='fillManualForm(${foodJson})'>
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <h6 class="mb-1">${food.name.charAt(0).toUpperCase() + food.name.slice(1)}</h6>
                                 <small class="text-muted">${food.serving}</small>
+                                ${food.source === 'usda' ? '<span class="badge bg-success ms-2">USDA</span>' : '<span class="badge bg-secondary ms-2">Local</span>'}
                             </div>
-                            <form method="post" action="/accept_prediction" class="d-inline">
-                                <input type="hidden" name="food_name" value="${food.name}">
-                                <input type="hidden" name="source" value="search">
-                                <button type="submit" class="btn btn-sm btn-success">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </form>
                         </div>
                         <div class="row mt-2 small">
                             <div class="col-3"><strong>${food.calories}</strong> kcal</div>
@@ -297,12 +352,24 @@ async function searchFood(query, resultsElementId) {
                 `;
             });
             html += '</div>';
+            html += `<div class="alert alert-info mt-2 mb-0"><small><i class="fas fa-hand-pointer me-1"></i>Click any food to auto-fill the manual form</small></div>`;
             resultsDiv.innerHTML = html;
         } else {
-            resultsDiv.innerHTML = '<div class="alert alert-warning">No results found. Try manual entry.</div>';
+            resultsDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>No results found for "${query}". 
+                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="document.getElementById('${resultsElementId}').innerHTML=''">Close</button>
+                    <p class="mb-0 mt-2"><small>Try manual entry instead.</small></p>
+                </div>
+            `;
         }
     } catch (error) {
-        resultsDiv.innerHTML = '<div class="alert alert-danger">Search failed. Please try again.</div>';
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times-circle me-2"></i>Search failed. Please try again.
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="document.getElementById('${resultsElementId}').innerHTML=''">Close</button>
+            </div>
+        `;
     }
 }
 
