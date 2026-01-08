@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Dehydration Risk Check - Baymax{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1><i class="fas fa-heartbeat me-2"></i>Dehydration Risk Assessment</h1>
+    <p>AI-powered prediction using your daily health signals</p>
+</div>
+
+<!-- Risk Assessment Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% if prediction.risk_level == 'Low' %}
+            {% set gradient = 'linear-gradient(135deg, #10b981 0%, #059669 100%)' %}
+            {% set icon = '✅' %}
+        {% elif prediction.risk_level == 'Moderate' %}
+            {% set gradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' %}
+            {% set icon = '⚠️' %}
+        {% elif prediction.risk_level == 'High' %}
+            {% set gradient = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' %}
+            {% set icon = '🚨' %}
+        {% else %}
+            {% set gradient = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' %}
+            {% set icon = '❓' %}
+        {% endif %}
+        
+        <div class="card" style="background: {{ gradient }}; color: white; border: none;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-3"><i class="fas fa-stethoscope me-2"></i>Current Dehydration Risk</h4>
+                        <div class="d-flex align-items-center mb-3">
+                            <div style="font-size: 4rem; opacity: 0.9; margin-right: 1rem;">{{ icon }}</div>
+                            <div>
+                                <h2 class="display-4 fw-bold mb-0">{{ prediction.risk_level }}</h2>
+                                <p class="mb-0 opacity-75">Confidence: {{ (prediction.confidence * 100)|round(1) }}%</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Probability Distribution -->
+                        <div class="mt-3">
+                            <small class="opacity-75 d-block mb-2">Risk Probability Distribution:</small>
+                            {% for risk, prob in prediction.probabilities.items() %}
+                            <div class="d-flex align-items-center mb-1">
+                                <span style="width: 80px; font-size: 0.9rem;">{{ risk }}:</span>
+                                <div class="progress flex-grow-1 mx-2" style="height: 20px; background: rgba(255,255,255,0.2);">
+                                    <div class="progress-bar" style="width: {{ (prob * 100)|round(1) }}%; background: rgba(255,255,255,0.8);">
+                                        {{ (prob * 100)|round(1) }}%
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 text-center">
+                        <div class="mb-3">
+                            <i class="fas fa-robot fa-4x opacity-75"></i>
+                        </div>
+                        <p class="mb-1"><strong>AI-Powered Analysis</strong></p>
+                        <small class="opacity-75">Based on multiple health signals</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recommendations -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list-check me-2"></i>Personalized Recommendations
+            </div>
+            <div class="card-body">
+                {% if prediction.recommendations %}
+                    {% for rec in prediction.recommendations %}
+                    <div class="alert alert-{% if rec.priority == 'URGENT' %}danger
+                                            {% elif rec.priority == 'HIGH' %}warning
+                                            {% elif rec.priority == 'MEDIUM' %}info
+                                            {% else %}success{% endif %} mb-3">
+                        <div class="d-flex align-items-start">
+                            <div style="font-size: 2rem; margin-right: 1rem;">{{ rec.icon }}</div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1"><strong>[{{ rec.priority }}] {{ rec.message }}</strong></h6>
+                                <p class="mb-0"><i class="fas fa-arrow-right me-2"></i>{{ rec.action }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <p class="text-muted">No specific recommendations at this time</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Risk Analysis -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>Risk Factor Analysis
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Risk Factors</h6>
+                        {% if prediction.analysis.risk_factors %}
+                            <ul class="list-unstyled">
+                                {% for factor in prediction.analysis.risk_factors %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>{{ factor }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted small">No risk factors detected</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-shield-alt me-2"></i>Protective Factors</h6>
+                        {% if prediction.analysis.protective_factors %}
+                            <ul class="list-unstyled">
+                                {% for factor in prediction.analysis.protective_factors %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>{{ factor }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted small">No protective factors detected</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Input Data & Quick Logging -->
+    <div class="col-lg-5">
+        <!-- Current Data -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-database me-2"></i>Today's Health Signals
+            </div>
+            <div class="card-body">
+                <div class="mb-3 p-2" style="background: #f0f9ff; border-radius: 8px;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-tint me-2" style="color: #06b6d4;"></i>Water Intake:</span>
+                        <strong>{{ water_intake }}ml</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3 p-2" style="background: #fef3c7; border-radius: 8px;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-toilet me-2" style="color: #f59e0b;"></i>Urination Events:</span>
+                        <strong>{{ urination_count }} times</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3 p-2" style="background: #f0fdf4; border-radius: 8px;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-running me-2" style="color: #10b981;"></i>Activity Level:</span>
+                        <strong>
+                            {% if activity_level == 0 %}Low
+                            {% elif activity_level == 1 %}Medium
+                            {% else %}High{% endif %}
+                        </strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3 p-2" style="background: #fee2e2; border-radius: 8px;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-thermometer-half me-2" style="color: #ef4444;"></i>Temperature:</span>
+                        <strong>{{ weather.temperature_c|round(1) }}°C</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3 p-2" style="background: #e0f2fe; border-radius: 8px;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-droplet me-2" style="color: #0284c7;"></i>Humidity:</span>
+                        <strong>{{ weather.humidity_percent }}%</strong>
+                    </div>
+                </div>
+                
+                <div class="p-2" style="background: #fef9c3; border-radius: 8px;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="fas fa-sun me-2" style="color: #eab308;"></i>Outdoor Time:</span>
+                        <strong>{{ outdoor_exposure|round(0) }} min</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Logging -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-plus-circle me-2"></i>Quick Log
+            </div>
+            <div class="card-body">
+                <!-- Log Urination -->
+                <form method="post" action="{{ url_for('log_urination') }}" class="mb-3">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fas fa-toilet me-2"></i>Log Urination Event
+                    </button>
+                </form>
+                
+                <!-- Log Activity -->
+                <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#activityModal">
+                    <i class="fas fa-running me-2"></i>Log Activity Level
+                </button>
+            </div>
+        </div>
+        
+        <!-- Weather Info -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cloud-sun me-2"></i>Current Weather
+            </div>
+            <div class="card-body text-center">
+                <h2 class="mb-1">{{ weather.temperature_c|round(1) }}°C</h2>
+                <p class="text-muted mb-2">{{ weather.weather|title }}</p>
+                <small class="text-muted">Feels like {{ weather.feels_like|round(1) }}°C</small>
+                <hr>
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <i class="fas fa-droplet fa-2x mb-2" style="color: #0284c7;"></i>
+                        <p class="mb-0"><strong>{{ weather.humidity_percent }}%</strong></p>
+                        <small class="text-muted">Humidity</small>
+                    </div>
+                    <div class="col-6">
+                        <i class="fas fa-temperature-high fa-2x mb-2" style="color: #ef4444;"></i>
+                        <p class="mb-0"><strong>{{ weather.feels_like|round(1) }}°C</strong></p>
+                        <small class="text-muted">Feels Like</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card mt-4">
+            <div class="card-body d-grid gap-2">
+                <a href="{{ url_for('water_intake') }}" class="btn btn-primary">
+                    <i class="fas fa-tint me-2"></i>Log Water Intake
+                </a>
+                <a href="{{ url_for('exercise') }}" class="btn btn-success">
+                    <i class="fas fa-dumbbell me-2"></i>Log Exercise
+                </a>
+                <a href="{{ url_for('dehydration_history') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-history me-2"></i>View History
+                </a>
+                <button class="btn btn-info" onclick="location.reload()">
+                    <i class="fas fa-sync me-2"></i>Refresh Assessment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Modal -->
+<div class="modal fade" id="activityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Log Activity Level</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('log_activity_level') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Activity Level</label>
+                        <select name="activity_level" class="form-select" required>
+                            <option value="0">Low (Sedentary, mostly sitting)</option>
+                            <option value="1" selected>Medium (Some walking, light activity)</option>
+                            <option value="2">High (Exercise, heavy activity)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Outdoor Exposure (minutes)</label>
+                        <input type="number" name="outdoor_exposure" class="form-control" 
+                               value="0" min="0" step="1">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Log Activity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

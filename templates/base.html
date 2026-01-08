@@ -295,6 +295,13 @@
         </a>
     </li>
     <li>
+    <a href="{{ url_for('dehydration_check') }}" 
+       class="{% if request.endpoint == 'dehydration_check' %}active{% endif %}">
+        <i class="fas fa-heartbeat"></i>
+        Dehydration Check
+    </a>
+</li>
+    <li>
         <a href="{{ url_for('profile') }}" class="{% if request.endpoint == 'profile' %}active{% endif %}">
             <i class="fas fa-user"></i>
             Profile

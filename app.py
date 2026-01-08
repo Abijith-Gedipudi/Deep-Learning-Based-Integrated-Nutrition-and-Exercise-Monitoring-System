@@ -14,6 +14,8 @@ from sqlalchemy import func
 import pytz
 from datetime import datetime, timedelta
 
+from dehydration_predictor import DehydrationPredictor, WeatherAPI
+
 IST = pytz.timezone('Asia/Kolkata')
 
 def get_current_time_ist():
@@ -27,8 +29,29 @@ def utc_to_ist(utc_dt):
         utc_dt = pytz.utc.localize(utc_dt)
     return utc_dt.astimezone(IST)
 
-# CONFIG
+# Load or train dehydration prediction model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEHYDRATION_MODEL_PATH = os.path.join(BASE_DIR, 'dehydration_model.pkl')
+dehydration_predictor = DehydrationPredictor()
+
+try:
+    if os.path.exists(DEHYDRATION_MODEL_PATH):
+        dehydration_predictor.load_model(DEHYDRATION_MODEL_PATH)
+        print("✓ Dehydration prediction model loaded")
+    else:
+        print("Training dehydration prediction model...")
+        dehydration_predictor.train_model()
+        dehydration_predictor.save_model(DEHYDRATION_MODEL_PATH)
+        print("✓ Dehydration model trained and saved")
+except Exception as e:
+    print(f"✗ Dehydration model error: {e}")
+
+# Initialize Weather API
+weather_api = WeatherAPI()
+
+
+# CONFIG
+
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -336,6 +359,45 @@ class WaterGoal(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class DehydrationLog(db.Model):
+    """Store dehydration predictions and user inputs"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(IST).replace(tzinfo=None))
+    
+    # Input features
+    water_intake_ml = db.Column(db.Float)
+    urination_events = db.Column(db.Integer)
+    activity_level = db.Column(db.Integer)  # 0=low, 1=medium, 2=high
+    temperature_c = db.Column(db.Float)
+    humidity_percent = db.Column(db.Float)
+    outdoor_exposure_minutes = db.Column(db.Float)
+    
+    # Prediction outputs
+    risk_level = db.Column(db.String(20))  # Low, Moderate, High
+    confidence = db.Column(db.Float)
+    
+    # Additional data
+    notes = db.Column(db.String(500), nullable=True)
+
+
+class UrinaryLog(db.Model):
+    """Track urination events for dehydration prediction"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(IST).replace(tzinfo=None))
+    notes = db.Column(db.String(200), nullable=True)
+
+
+class ActivityLog(db.Model):
+    """Quick activity level logging (separate from exercise)"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(IST).replace(tzinfo=None))
+    activity_level = db.Column(db.Integer)  # 0=low, 1=medium, 2=high
+    outdoor_exposure_minutes = db.Column(db.Float, default=0)
+    notes = db.Column(db.String(200), nullable=True)
+
 
 # Create tables
 with app.app_context():
@@ -598,6 +660,79 @@ def get_exercise_suggestions(calories, user_weight=70):
     
     return suggestions
 
+def get_today_water_intake(user_id):
+    """Get total water intake for today"""
+    ist_now = datetime.now(IST)
+    today_start = ist_now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    
+    today_intakes = WaterIntake.query.filter(
+        WaterIntake.user_id == user_id,
+        WaterIntake.timestamp >= today_start
+    ).all()
+    
+    return sum(intake.amount_ml for intake in today_intakes)
+
+
+def get_today_urination_count(user_id):
+    """Count urination events today"""
+    ist_now = datetime.now(IST)
+    today_start = ist_now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    
+    count = UrinaryLog.query.filter(
+        UrinaryLog.user_id == user_id,
+        UrinaryLog.timestamp >= today_start
+    ).count()
+    
+    return count
+
+
+def get_today_activity_data(user_id):
+    """Get today's activity level and outdoor exposure"""
+    ist_now = datetime.now(IST)
+    today_start = ist_now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    
+    # Get activity logs
+    activities = ActivityLog.query.filter(
+        ActivityLog.user_id == user_id,
+        ActivityLog.timestamp >= today_start
+    ).all()
+    
+    if activities:
+        # Get most recent or highest activity level
+        activity_level = max(act.activity_level for act in activities)
+        outdoor_exposure = sum(act.outdoor_exposure_minutes for act in activities)
+    else:
+        # Default to low activity
+        activity_level = 0
+        outdoor_exposure = 0
+    
+    return activity_level, outdoor_exposure
+
+
+def infer_activity_from_exercise(user_id):
+    """Infer activity level from logged exercises"""
+    ist_now = datetime.now(IST)
+    today_start = ist_now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    
+    exercises = ExerciseLog.query.filter(
+        ExerciseLog.user_id == user_id,
+        ExerciseLog.date >= today_start
+    ).all()
+    
+    if not exercises:
+        return 0  # Low activity
+    
+    # Calculate total MET-minutes
+    total_met_minutes = sum(ex.met_value * ex.duration_minutes for ex in exercises)
+    
+    # Categorize based on total intensity
+    if total_met_minutes < 200:
+        return 0  # Low
+    elif total_met_minutes < 500:
+        return 1  # Medium
+    else:
+        return 2  # High
+
 
 # ============= ROUTES =============
 
@@ -668,6 +803,32 @@ def dashboard():
     avg_protein = round(total_protein / days_count, 1)
     avg_carbs = round(total_carbs / days_count, 1)
     avg_fats = round(total_fats / days_count, 1)
+
+    water_intake_today = get_today_water_intake(current_user.id)
+    urination_count = get_today_urination_count(current_user.id)
+    activity_level = infer_activity_from_exercise(current_user.id)
+    weather = weather_api.get_weather()
+
+    user_weight = current_user.weight_kg if current_user.weight_kg else 70
+    user_age = current_user.age if current_user.age else 30
+    user_gender = 1 if current_user.gender and current_user.gender.lower() == 'male' else 0
+
+    try:
+        dehydration_risk = dehydration_predictor.predict(
+            water_intake_ml=water_intake_today,
+            urination_events=urination_count,
+            activity_level=activity_level,
+            temperature_c=weather['temperature_c'],
+            humidity_percent=weather['humidity_percent'],
+            outdoor_exposure_minutes=0,
+            hour_of_day=datetime.now(IST).hour,
+            body_weight_kg=user_weight,
+            age=user_age,
+            gender=user_gender
+        )
+    except Exception as e:
+        print(f"Dehydration prediction error: {e}")
+        dehydration_risk = None
     
     bmi = None
     bmi_category = ""
@@ -714,7 +875,9 @@ def dashboard():
                          today_logs=today_logs,
                          exercise_stats=exercise_stats,
                          exercise_goal=exercise_goal_value,
-                         net_calories=net_calories)
+                         net_calories=net_calories,
+                         dehydration_risk=dehydration_risk,
+                         weather=weather)
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -1275,6 +1438,184 @@ def water_reminder_status():
         'minutes_since_last': int(minutes_since_last),
         'interval': goal.reminder_interval_minutes
     })
+
+@app.route('/dehydration_check')
+@login_required
+def dehydration_check():
+    """Main dehydration prediction page"""
+    # Get today's data
+    water_intake = get_today_water_intake(current_user.id)
+    urination_count = get_today_urination_count(current_user.id)
+    activity_level, outdoor_exposure = get_today_activity_data(current_user.id)
+    
+    # If no activity logged, infer from exercise
+    if activity_level == 0:
+        activity_level = infer_activity_from_exercise(current_user.id)
+    
+    # Get weather data
+    weather = weather_api.get_weather()
+    
+    # Get current hour
+    current_hour = datetime.now(IST).hour
+    
+    user_weight = current_user.weight_kg if current_user.weight_kg else 70
+    user_age = current_user.age if current_user.age else 30
+    user_gender = 1 if current_user.gender and current_user.gender.lower() == 'male' else 0
+    # Make prediction
+    try:
+        prediction = dehydration_predictor.predict(
+            water_intake_ml=water_intake,
+            urination_events=urination_count,
+            activity_level=activity_level,
+            temperature_c=weather['temperature_c'],
+            humidity_percent=weather['humidity_percent'],
+            outdoor_exposure_minutes=outdoor_exposure,
+            hour_of_day=current_hour,
+            body_weight_kg=user_weight,
+            age=user_age,
+            gender=user_gender
+        )
+
+        log = DehydrationLog(
+            user_id=current_user.id,
+            water_intake_ml=water_intake,
+            urination_events=urination_count,
+            activity_level=activity_level,
+            temperature_c=weather['temperature_c'],
+            humidity_percent=weather['humidity_percent'],
+            outdoor_exposure_minutes=outdoor_exposure,
+            risk_level=prediction['risk_level'],
+            confidence=prediction['confidence']
+        )
+        db.session.add(log)
+        db.session.commit()
+
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        prediction = {
+            'risk_level': 'Unknown',
+            'confidence': 0,
+            'probabilities': {'Low': 0.33, 'Moderate': 0.33, 'High': 0.34},
+            'recommendations': [{
+                'priority': 'MEDIUM',
+                'message': 'Unable to assess risk',
+                'action': 'Please ensure your profile is complete and try again',
+                'icon': '⚠️'
+            }],
+            'analysis': {'risk_factors': [], 'protective_factors': []}
+        }
+    
+    return render_template('dehydration_check.html',
+                         prediction=prediction,
+                         weather=weather,
+                         water_intake=water_intake,
+                         urination_count=urination_count,
+                         activity_level=activity_level,
+                         outdoor_exposure=outdoor_exposure)
+
+
+@app.route('/log_urination', methods=['POST'])
+@login_required
+def log_urination():
+    """Log a urination event"""
+    notes = request.form.get('notes', '').strip()
+    
+    log = UrinaryLog(
+        user_id=current_user.id,
+        notes=notes
+    )
+    
+    db.session.add(log)
+    db.session.commit()
+    
+    flash("Urination event logged", "success")
+    return redirect(url_for('dehydration_check'))
+
+
+@app.route('/log_activity_level', methods=['POST'])
+@login_required
+def log_activity_level():
+    """Log activity level and outdoor exposure"""
+    activity_level = int(request.form.get('activity_level', 0))
+    outdoor_exposure = float(request.form.get('outdoor_exposure', 0))
+    notes = request.form.get('notes', '').strip()
+    
+    log = ActivityLog(
+        user_id=current_user.id,
+        activity_level=activity_level,
+        outdoor_exposure_minutes=outdoor_exposure,
+        notes=notes
+    )
+    
+    db.session.add(log)
+    db.session.commit()
+    
+    flash("Activity level logged", "success")
+    return redirect(url_for('dehydration_check'))
+
+
+@app.route('/dehydration_history')
+@login_required
+def dehydration_history():
+    """View dehydration prediction history"""
+    logs = DehydrationLog.query.filter_by(
+        user_id=current_user.id
+    ).order_by(DehydrationLog.timestamp.desc()).limit(50).all()
+    
+    # Calculate statistics
+    if logs:
+        total_checks = len(logs)
+        high_risk_count = sum(1 for log in logs if log.risk_level == 'High')
+        moderate_risk_count = sum(1 for log in logs if log.risk_level == 'Moderate')
+        low_risk_count = sum(1 for log in logs if log.risk_level == 'Low')
+        
+        avg_confidence = sum(log.confidence for log in logs) / len(logs)
+    else:
+        total_checks = high_risk_count = moderate_risk_count = low_risk_count = 0
+        avg_confidence = 0
+    
+    return render_template('dehydration_history.html',
+                         logs=logs,
+                         total_checks=total_checks,
+                         high_risk_count=high_risk_count,
+                         moderate_risk_count=moderate_risk_count,
+                         low_risk_count=low_risk_count,
+                         avg_confidence=avg_confidence)
+
+
+@app.route('/api/dehydration_predict', methods=['POST'])
+@login_required
+def api_dehydration_predict():
+    """API endpoint for real-time dehydration prediction"""
+    data = request.get_json()
+    
+    # Get user data
+    user_weight = current_user.weight_kg if current_user.weight_kg else 70
+    user_age = current_user.age if current_user.age else 30
+    user_gender = 1 if current_user.gender and current_user.gender.lower() == 'male' else 0
+    
+    try:
+        prediction = dehydration_predictor.predict(
+            water_intake_ml=float(data.get('water_intake_ml', 0)),
+            urination_events=int(data.get('urination_events', 0)),
+            activity_level=int(data.get('activity_level', 0)),
+            temperature_c=float(data.get('temperature_c', 25)),
+            humidity_percent=float(data.get('humidity_percent', 60)),
+            outdoor_exposure_minutes=float(data.get('outdoor_exposure_minutes', 0)),
+            hour_of_day=int(data.get('hour_of_day', datetime.now(IST).hour)),
+            body_weight_kg=user_weight,
+            age=user_age,
+            gender=user_gender
+        )
+        
+        return jsonify(prediction)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     print("\n" + "="*60)
