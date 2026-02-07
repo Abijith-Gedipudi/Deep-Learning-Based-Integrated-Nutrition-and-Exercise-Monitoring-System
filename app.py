@@ -1616,6 +1616,174 @@ def api_dehydration_predict():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 400
+    
+@app.route('/weekly_analytics')
+@login_required
+def weekly_analytics():
+    """Weekly analytics dashboard with visualizations"""
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+    
+    # Get data for last 7 days
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    
+    # Initialize daily data structure
+    daily_data = {}
+    for i in range(7):
+        date = (datetime.utcnow() - timedelta(days=6-i)).date()
+        daily_data[date.strftime('%Y-%m-%d')] = {
+            'date': date.strftime('%b %d'),
+            'day_name': date.strftime('%A'),
+            'calories': 0,
+            'protein': 0,
+            'carbs': 0,
+            'fats': 0,
+            'exercise_calories': 0,
+            'exercise_duration': 0,
+            'water_intake': 0,
+            'net_calories': 0,
+            'meal_count': 0,
+            'workout_count': 0,
+            'water_count': 0
+        }
+    
+    # Food logs
+    food_logs = FoodLog.query.filter(
+        FoodLog.user_id == current_user.id,
+        FoodLog.date >= week_ago
+    ).all()
+    
+    for log in food_logs:
+        date_key = log.date.strftime('%Y-%m-%d')
+        if date_key in daily_data:
+            daily_data[date_key]['calories'] += log.calories or 0
+            daily_data[date_key]['protein'] += log.protein or 0
+            daily_data[date_key]['carbs'] += log.carbs or 0
+            daily_data[date_key]['fats'] += log.fats or 0
+            daily_data[date_key]['meal_count'] += 1
+    
+    # Exercise logs
+    exercise_logs = ExerciseLog.query.filter(
+        ExerciseLog.user_id == current_user.id,
+        ExerciseLog.date >= week_ago
+    ).all()
+    
+    for log in exercise_logs:
+        date_key = log.date.strftime('%Y-%m-%d')
+        if date_key in daily_data:
+            daily_data[date_key]['exercise_calories'] += log.calories_burned or 0
+            daily_data[date_key]['exercise_duration'] += log.duration_minutes or 0
+            daily_data[date_key]['workout_count'] += 1
+    
+    # Water intake logs
+    water_logs = WaterIntake.query.filter(
+        WaterIntake.user_id == current_user.id,
+        WaterIntake.timestamp >= week_ago
+    ).all()
+    
+    for log in water_logs:
+        date_key = log.timestamp.strftime('%Y-%m-%d')
+        if date_key in daily_data:
+            daily_data[date_key]['water_intake'] += log.amount_ml or 0
+            daily_data[date_key]['water_count'] += 1
+    
+    # Calculate net calories
+    for date_key in daily_data:
+        daily_data[date_key]['net_calories'] = (
+            daily_data[date_key]['calories'] - 
+            daily_data[date_key]['exercise_calories']
+        )
+    
+    # Sort by date and convert to list of dicts for easier template handling
+    sorted_daily_data = [
+        {
+            'date_key': date_key,
+            'date': data['date'],
+            'day_name': data['day_name'],
+            'calories': round(data['calories'], 1),
+            'protein': round(data['protein'], 1),
+            'carbs': round(data['carbs'], 1),
+            'fats': round(data['fats'], 1),
+            'exercise_calories': round(data['exercise_calories'], 1),
+            'exercise_duration': round(data['exercise_duration'], 1),
+            'water_intake': round(data['water_intake'], 1),
+            'net_calories': round(data['net_calories'], 1),
+            'meal_count': data['meal_count'],
+            'workout_count': data['workout_count'],
+            'water_count': data['water_count']
+        }
+        for date_key, data in sorted(daily_data.items())
+    ]
+    
+    # Calculate weekly totals and averages
+    weekly_stats = {
+        'total_calories': sum(d['calories'] for d in daily_data.values()),
+        'total_protein': sum(d['protein'] for d in daily_data.values()),
+        'total_carbs': sum(d['carbs'] for d in daily_data.values()),
+        'total_fats': sum(d['fats'] for d in daily_data.values()),
+        'total_exercise_calories': sum(d['exercise_calories'] for d in daily_data.values()),
+        'total_exercise_duration': sum(d['exercise_duration'] for d in daily_data.values()),
+        'total_water': sum(d['water_intake'] for d in daily_data.values()),
+        'total_meals': sum(d['meal_count'] for d in daily_data.values()),
+        'total_workouts': sum(d['workout_count'] for d in daily_data.values()),
+        'avg_calories': round(sum(d['calories'] for d in daily_data.values()) / 7, 1),
+        'avg_protein': round(sum(d['protein'] for d in daily_data.values()) / 7, 1),
+        'avg_carbs': round(sum(d['carbs'] for d in daily_data.values()) / 7, 1),
+        'avg_fats': round(sum(d['fats'] for d in daily_data.values()) / 7, 1),
+        'avg_exercise': round(sum(d['exercise_calories'] for d in daily_data.values()) / 7, 1),
+        'avg_water': round(sum(d['water_intake'] for d in daily_data.values()) / 7, 0)
+    }
+    
+    # Get user goals
+    recommended_calories = calculate_bmr(current_user)
+    exercise_goal = ExerciseGoal.query.filter_by(user_id=current_user.id).first()
+    exercise_goal_value = exercise_goal.daily_calorie_goal if exercise_goal else 500
+    
+    water_goal = WaterGoal.query.filter_by(user_id=current_user.id).first()
+    water_goal_value = water_goal.daily_goal_ml if water_goal else 2000
+    
+    # Macro distribution (weekly average)
+    macro_total = weekly_stats['avg_protein'] + weekly_stats['avg_carbs'] + weekly_stats['avg_fats']
+    macro_distribution = {
+        'protein': round((weekly_stats['avg_protein'] / macro_total * 100), 1) if macro_total > 0 else 0,
+        'carbs': round((weekly_stats['avg_carbs'] / macro_total * 100), 1) if macro_total > 0 else 0,
+        'fats': round((weekly_stats['avg_fats'] / macro_total * 100), 1) if macro_total > 0 else 0
+    }
+    
+    # Most consumed foods
+    food_frequency = defaultdict(lambda: {'count': 0, 'calories': 0})
+    for log in food_logs:
+        food_frequency[log.food_name]['count'] += 1
+        food_frequency[log.food_name]['calories'] += log.calories or 0
+    
+    top_foods = sorted(
+        food_frequency.items(), 
+        key=lambda x: x[1]['count'], 
+        reverse=True
+    )[:5]
+    
+    # Most frequent exercises
+    exercise_frequency = defaultdict(lambda: {'count': 0, 'calories': 0, 'duration': 0})
+    for log in exercise_logs:
+        exercise_frequency[log.exercise_name]['count'] += 1
+        exercise_frequency[log.exercise_name]['calories'] += log.calories_burned or 0
+        exercise_frequency[log.exercise_name]['duration'] += log.duration_minutes or 0
+    
+    top_exercises = sorted(
+        exercise_frequency.items(), 
+        key=lambda x: x[1]['count'], 
+        reverse=True
+    )[:5]
+    
+    return render_template('weekly_analytics.html',
+                         daily_data=sorted_daily_data,
+                         weekly_stats=weekly_stats,
+                         macro_distribution=macro_distribution,
+                         top_foods=top_foods,
+                         top_exercises=top_exercises,
+                         recommended_calories=recommended_calories or 2000,
+                         exercise_goal=exercise_goal_value,
+                         water_goal=water_goal_value)
 
 if __name__ == '__main__':
     print("\n" + "="*60)
