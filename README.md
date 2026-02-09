@@ -395,57 +395,8 @@ We welcome contributions from the community! Here's how you can help:
 
 ---
 
-## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-## 👥 Contact
-
-**Project Maintainer:** Your Name
-
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
-
-**Project Link:** [https://github.com/yourusername/Deep-Learning-Based-Integrated-Nutrition-and-Exercise-Monitoring-System](https://github.com/yourusername/Deep-Learning-Based-Integrated-Nutrition-and-Exercise-Monitoring-System)
-
----
-
-## 🙏 Acknowledgments
-
-- **Food-101 Dataset** - ETH Zurich for the comprehensive food dataset
-- **Bootstrap** - For the responsive UI framework
-- **Font Awesome** - For the beautiful icons
-- **PyTorch Team** - For the deep learning framework
-- **Flask Community** - For the excellent web framework
-
----
-
-## 🗺️ Roadmap
-
-### Upcoming Features
-- [ ] Mobile app (iOS & Android)
-- [ ] Meal planning and recipe suggestions
-- [ ] Social features and friend challenges
-- [ ] Integration with fitness wearables
-- [ ] Voice-activated logging
-- [ ] Barcode scanner for packaged foods
-- [ ] Nutritionist chat support
-- [ ] Export data to PDF/CSV
-- [ ] Multi-language support
-- [ ] Dark mode theme
-
-### Future Enhancements
-- [ ] Enhanced AI models with more food categories
-- [ ] Personalized meal recommendations based on goals
-- [ ] Integration with grocery delivery services
-- [ ] Sleep tracking integration
-- [ ] Stress and mood tracking
-- [ ] Progressive web app (PWA) support
-
----
 
 ## ✨ Conclusion
 
@@ -461,10 +412,4 @@ This project demonstrates the power of AI in personal health management and prov
 
 ---
 
-<div align="center">
 
-**Made with ❤️ for a healthier world**
-
-*"I will always be with you." - Baymax*
-
-</div>
